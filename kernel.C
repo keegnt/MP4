@@ -211,9 +211,9 @@ int main()
 		4 MB);
 
 	PageTable pt1;
-
+	Console::puts("loading page table\n");
 	pt1.load();
-
+	Console::puts("attempting to enable paging\n");
 	PageTable::enable_paging();
 
 	/* -- INITIALIZE THE TWO VIRTUAL MEMORY PAGE POOLS -- */

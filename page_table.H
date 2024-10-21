@@ -28,6 +28,7 @@
 #include "exceptions.H"
 #include "cont_frame_pool.H"
 #include "vm_pool.H"
+#include "vector"
 
 /*--------------------------------------------------------------------------*/
 /* FORWARDS */
@@ -55,6 +56,7 @@ private:
     
     /* DATA FOR CURRENT PAGE TABLE */
     unsigned long        * page_directory;     /* where is page directory located? */
+    std::vector<VMPool*> vm_pools;
     
 public:
     static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE;
@@ -97,7 +99,12 @@ public:
     
     void free_page(unsigned long _page_no);
     /* If page is valid, release frame and mark page invalid. */
-    
+
+    unsigned long * PDE_address(unsigned long addr);
+    //return the address of the PDE 
+
+    unsigned long * PTE_address(unsigned long addr);
+    //return the address of the PTE. 
 };
 
 #endif
