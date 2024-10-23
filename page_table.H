@@ -28,7 +28,6 @@
 #include "exceptions.H"
 #include "cont_frame_pool.H"
 #include "vm_pool.H"
-#include "vector"
 
 /*--------------------------------------------------------------------------*/
 /* FORWARDS */
@@ -56,13 +55,16 @@ private:
     
     /* DATA FOR CURRENT PAGE TABLE */
     unsigned long        * page_directory;     /* where is page directory located? */
-    std::vector<VMPool*> vm_pools;
     
 public:
     static const unsigned int PAGE_SIZE        = Machine::PAGE_SIZE;
     /* in bytes */
     static const unsigned int ENTRIES_PER_PAGE = Machine::PT_ENTRIES_PER_PAGE;
     /* in entries */
+    static const unsigned int MAX_POOLS = 256;  // Maximum number of VM pools
+    VMPool* vm_pools[MAX_POOLS];                // Array to store VM pools
+    unsigned int pool_count;                    // Tracks the number of registered pools
+
     
     static void init_paging(ContFramePool * _kernel_mem_pool,
                             ContFramePool * _process_mem_pool,

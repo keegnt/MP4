@@ -32,6 +32,11 @@
 /*--------------------------------------------------------------------------*/
 /* DATA STRUCTURES */
 /*--------------------------------------------------------------------------*/
+// struct Region {
+//    unsigned long base_page;  // Base page number
+//    unsigned long length;     // Length in pages
+// };
+
 
 /* Forward declaration of class PageTable */
 /* We need this to break a circular include sequence. */
@@ -44,8 +49,27 @@ class PageTable;
 class VMPool { /* Virtual Memory Pool */
 private:
    /* -- DEFINE YOUR VIRTUAL MEMORY POOL DATA STRUCTURE(s) HERE. */
+   unsigned long base_address; 
+   unsigned long size;  
+   ContFramePool* frame_pool; 
+   PageTable* page_table;
 
+   unsigned long free_base_page[256];
+   unsigned long free_length[256];
+   unsigned int free_count = 0;
+
+   unsigned long allocated_base_page[256];
+   unsigned long allocated_length[256];
+   unsigned int allocated_count = 0;
+   
+   // Region* allocated_regions; 
+   // Region* free_regions; 
+   // unsigned int allocated_region_count;
+   // unsigned int free_region_count;
 public:
+   static const unsigned int FRAME_SIZE = Machine::PAGE_SIZE; 
+   static const unsigned int PAGE_SIZE  = Machine::PAGE_SIZE;
+   
    VMPool(unsigned long  _base_address,
           unsigned long  _size,
           ContFramePool *_frame_pool,

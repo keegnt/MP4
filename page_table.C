@@ -18,7 +18,6 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
     kernel_mem_pool = _kernel_mem_pool;
     process_mem_pool = _process_mem_pool;
     shared_size = _shared_size;
-
    
    
     Console::puts("Initialized Paging System\n");
@@ -26,6 +25,7 @@ void PageTable::init_paging(ContFramePool * _kernel_mem_pool,
 
 PageTable::PageTable()
 {
+    pool_count=0;
     // Allocate a frame for the page directory from the kernel memory pool
    unsigned long page_directory_frame = process_mem_pool->get_frames(1); // Get physical frame number
 
@@ -41,7 +41,7 @@ PageTable::PageTable()
    }
 
    // Allocate a frame for the first page table (for the first 4MB of memory)
-   unsigned long first_page_table_frame = kernel_mem_pool->get_frames(1);
+   unsigned long first_page_table_frame = process_mem_pool->get_frames(1);
    if (first_page_table_frame == 0) {
       Console::puts("Failed to allocate first page table\n");
       return;
@@ -73,7 +73,7 @@ PageTable::PageTable()
 
 
 
-    Console::puts("Constructed Page Table object in process memory pool?\n");
+    Console::puts("Constructed Page Table object in process memory pool\n");
 }
 
 
@@ -84,14 +84,6 @@ void PageTable::load()
         Console::puts("Error: Page directory not set\n");
         return;
     }
-    unsigned long* last_pde = PageTable::PDE_address(0xFFFFF000);
-    unsigned long last_pde_value = *last_pde;
-
-    Console::puts("loading with PD at: ");
-    Console::putui(reinterpret_cast<unsigned long>(page_directory));
-    Console::puts("\nlast PDE reads: ");
-    Console::puti(last_pde_value);
-    Console::puts("\n");
 
     write_cr3(reinterpret_cast<unsigned long>(page_directory));
     current_page_table = this;   
@@ -116,13 +108,16 @@ void PageTable::handle_fault(REGS * _r)
         return;
     }
 
+    Console::puts("retrieving faulting address...");
     // Get the address that caused the fault
     unsigned long faulting_address = read_cr2();
-
+    Console::putui(faulting_address);
+    Console::puts("\n");
     // Check if the faulting address is legitimate by checking with all registered VM pools
     bool legitimate = false;
-    for (VMPool* pool : current_page_table->vm_pools) {
-        if (pool->is_legitimate(faulting_address)) {
+    
+    for (unsigned int i = 0; i < current_page_table->pool_count; i++) {
+        if (current_page_table->vm_pools[i] && current_page_table->vm_pools[i]->is_legitimate(faulting_address)) { 
             legitimate = true;
             break;  // If the address is legitimate, we can handle the page fault
         }
@@ -182,12 +177,36 @@ void PageTable::handle_fault(REGS * _r)
 
 void PageTable::register_pool(VMPool * _vm_pool)
 {
-    vm_pools.push_back(_vm_pool);
-    Console::puts("registered VM pool\n");
+    Console::puts("Registering VMPool object with page table\n");
+    if (pool_count < MAX_POOLS) {
+        vm_pools[pool_count++] = _vm_pool;
+        Console::puts("Registered VM pool\n");
+    } else {
+        Console::puts("Error: Maximum number of VM pools reached\n");
+    }
 }
 
 void PageTable::free_page(unsigned long _page_no) {
-    assert(false);
+    // Calculate the virtual address corresponding to the page number
+    unsigned long virtual_address = _page_no * PAGE_SIZE;
+
+    // Get the PDE and PTE addresses using the helper functions
+    unsigned long* pde = PDE_address(virtual_address);
+    unsigned long* pte = PTE_address(virtual_address);
+
+    // Check if the page is present by checking the present bit in the PTE
+    if (!(*pte & 0x1)) {
+        // Page is already invalid, no need to free it
+        Console::puts("Error: Page is already invalid\n");
+        return;
+    }
+
+    // Mark the page as invalid by clearing the present bit in the PTE
+    *pte = 0;
+
+    // Flush the TLB by reloading CR3 with the current value
+    write_cr3(read_cr3());
+
     Console::puts("freed page\n");
 }
 
